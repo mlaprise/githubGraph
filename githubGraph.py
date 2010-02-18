@@ -2,12 +2,12 @@
 # *********************************************
 #	
 #	Visualize the social the social network
-#   of a GitHub user
+#	of a GitHub user
 #
 #
 #
-#	Author: 	Martin Laprise
-#		    	Universite Laval
+#	Author:		Martin Laprise
+#		   		Universite Laval
 #				martin.laprise.1@ulaval.ca
 #                 
 # *********************************************
@@ -65,8 +65,8 @@ def addUserToGraph(Graph, userID):
 # Some Parameters
 useScreenName = False
 Depth = 2
-github = Github(username='mlaprise',
-			    api_token='7ac3c6400047ba64a9ed5a4ac932030e')
+github = Github(username='YOURUSERNAME',
+			    api_token='YOURAPITOKEN')
 
 # List of users to graph
 myName = 'mlaprise'
