@@ -31,87 +31,103 @@ from pygraphviz import *
 from github2.client import Github
 
 
-def getUserData(userID):
-	'''
-	Retrieve the social graph info from the user
-	'''
-	followingList = github.users.following(userID)
-	followersList = github.users.followers(userID)
+class githubGraph:
 
-	return [followingList, followersList]
+	def __init__(self, userName, apiToken):
+		self.ghConnect = Github(username=userName, api_token=apiToken)
 
+	def getUserData(self, userID):
+		'''
+		Retrieve the social graph info from the user
+		'''
+		followingList = self.ghConnect.users.following(userID)
+		followersList = self.ghConnect.users.followers(userID)
 
-def addUserToGraph(Graph, userID):
-	'''
-	Add the user to the digraph
-	'''	
-	[followingList, followersList] = getUserData(userID)
-
-	for snUser in followingList:
-		if snUser not in Graph.nodes():
-			Graph.add_node(snUser)
-		if (userID, snUser) not in Graph.edges():
-			Graph.add_edge([userID, snUser])
-
-	for snUser in followersList:
-		if snUser not in Graph.nodes():
-			Graph.add_node(snUser)
-		if (snUser, userID) not in Graph.edges():
-			Graph.add_edge([snUser, userID])
-	print str(len(Graph)) + ' nodes'
+		return [followingList, followersList]
 
 
+	def addUserToGraph(self, Graph, userID):
+		'''
+		Add the user to the digraph
+		'''	
+		[followingList, followersList] = self.getUserData(userID)
 
-# Some Parameters
-useScreenName = False
-Depth = 2
-github = Github(username='YOURUSERNAME',
-			    api_token='YOURAPITOKEN')
+		for snUser in followingList:
+			if snUser not in Graph.nodes():
+				Graph.add_node(snUser)
+			if (userID, snUser) not in Graph.edges():
+				Graph.add_edge([userID, snUser])
 
-# List of users to graph
-myName = 'mlaprise'
-myID = 'mlaprise'
-[followingList, followersList] = getUserData(myID)
-
-
-# Graph creation
-githubGraph = digraph()
-githubGraph.add_node(myID)
-addUserToGraph(githubGraph, myID)
+		for snUser in followersList:
+			if snUser not in Graph.nodes():
+				Graph.add_node(snUser)
+			if (snUser, userID) not in Graph.edges():
+				Graph.add_edge([snUser, userID])
+		print str(len(Graph)) + ' nodes'
 
 
-# Graph traversal
-for d in range(Depth):
-	retrievalItr = traversal(githubGraph, myID, 'post')
-	try:
-		while 1:
-			userID=retrievalItr.next()
-			'''
-			Add a user to the graph
-			Waiting 60 sec if we go beyond the API limitation (60 requests/min)
-			'''
+
+
+	def ffDigraph(self, myID, depth = 1, pngOutput = 1, dotOutput = 1, pngDPI = 10):
+		'''
+		Generate the following/followers digraph
+		'''	
+	
+		myName = myID
+
+		[followingList, followersList] = self.getUserData(myID)
+
+
+		# Graph creation
+		githubGraph = digraph()
+		githubGraph.add_node(myID)
+		self.addUserToGraph(githubGraph, myID)
+
+
+		# Graph traversal
+		for d in range(depth):
+			retrievalItr = traversal(githubGraph, myID, 'post')
 			try:
-				addUserToGraph(githubGraph, userID)
-			except RuntimeError:
-				time.sleep(60)
-				addUserToGraph(githubGraph, userID)
-	except StopIteration:
-		print 'Depth ' + str(d+1) + ' Done !'
+				while 1:
+					userID=retrievalItr.next()
+					'''
+					Add a user to the graph
+					Waiting 60 sec if we go beyond the API limitation (60 requests/min)
+					'''
+					try:
+						self.addUserToGraph(githubGraph, userID)
+					except RuntimeError:
+						time.sleep(60)
+						self.addUserToGraph(githubGraph, userID)
+			except StopIteration:
+				print 'Depth ' + str(d+1) + ' Done !'
 
 
-# Construct the image of the graph
-dot = write(githubGraph)
-githubGraphViz = AGraph(string=dot)
-githubGraphViz.graph_attr['label']='Twitter Graph of ' + myName
-githubGraphViz.graph_attr['dpi'] = '2'
-githubGraphViz.graph_attr['overlap'] = 'scale'
-githubGraphViz.node_attr['label']= ''
-githubGraphViz.node_attr['color']= 'blue'
-githubGraphViz.node_attr['style']= 'filled'
-githubGraphViz.edge_attr['color']='black'
-githubGraphViz.layout()
+		# Construct the image of the graph
+		dot = write(githubGraph)
 
-# Draw as PNG
-githubGraphViz.draw(myName + '_graph.svg')
+		if pngOutput==1:
+			githubGraphViz = AGraph(string=dot)
+			githubGraphViz.graph_attr['label']='Twitter Graph of ' + myName
+			githubGraphViz.graph_attr['dpi'] = str(pngDPI)
+			githubGraphViz.graph_attr['overlap'] = 'scale'
+			githubGraphViz.node_attr['label']= ''
+			githubGraphViz.node_attr['color']= 'blue'
+			#githubGraphViz.node_attr['width']= '10'
+			#githubGraphViz.node_attr['fixedsize']= 'true'
+			githubGraphViz.node_attr['style']= 'filled'
+			githubGraphViz.edge_attr['color']='black'
+			githubGraphViz.edge_attr['penwidth']='5'
+
+			githubGraphViz.layout()
+
+			# Draw as PNG
+			githubGraphViz.draw(myName + '_graph.png')
+
+		if dotOutput==1:
+			# Write a dot file
+			myfile = file(myName + '_graph.dot', 'w')
+			myfile.write(dot)
+
 
 
